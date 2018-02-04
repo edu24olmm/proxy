@@ -66,6 +66,7 @@ public class HttpProxyServer {
         return serverConfig.getClientSslCtx();
     }
 
+    @Bean
     private void init() throws Exception {
         //注册BouncyCastleProvider加密库
         Security.addProvider(new BouncyCastleProvider());
