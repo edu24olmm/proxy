@@ -169,7 +169,7 @@ public class HttpProxyServer {
 
     }
 
-    @Bean
+    //    @Bean
     public int start(int port) {
         port = 9999;
         bossGroup = new NioEventLoopGroup();
@@ -272,8 +272,55 @@ public class HttpProxyServer {
 
     }
 
+    @Bean
+    public int runserver2() throws Exception {
+        LOGGER.info("runserver2.........");
+        proxyInterceptInitializer(new HttpProxyInterceptInitializer() {
+            @Override
+            public void init(HttpProxyInterceptPipeline pipeline) {
+                pipeline.addLast(new CertDownIntercept());  //处理证书下载
+                pipeline.addLast(new HttpProxyIntercept() {
+                    @Override
+                    public void beforeRequest(Channel clientChannel, HttpRequest httpRequest,
+                                              HttpProxyInterceptPipeline pipeline) throws Exception {
+                        //替换UA，伪装成手机浏览器
+//                                httpRequest.headers().set(HttpHeaderNames.USER_AGENT,
+//                                        "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1");
+                        //转到下一个拦截器处理
+                        pipeline.beforeRequest(clientChannel, httpRequest);
+                    }
 
-    //    @Bean
+                    @Override
+                    public void afterResponse(Channel clientChannel, Channel proxyChannel,
+                                              HttpResponse httpResponse, HttpProxyInterceptPipeline pipeline) throws Exception {
+
+                        //转到下一个拦截器处理
+                        pipeline.afterResponse(clientChannel, proxyChannel, httpResponse);
+                    }
+                });
+            }
+        })
+                .httpProxyExceptionHandle(new HttpProxyExceptionHandle() {
+                    @Override
+                    public void beforeCatch(Channel clientChannel, Throwable cause) throws Exception {
+                        LOGGER.info("11111111111111111");
+                        cause.printStackTrace();
+                    }
+
+                    @Override
+                    public void afterCatch(Channel clientChannel, Channel proxyChannel, Throwable cause) throws Exception {
+                        LOGGER.info("afterCatch捕获异常异常原因为,并检查是否过期：" + cause.toString());
+                        Boolean boo = HttpUtils.chechISTimeOut(resultIPsPo.getRESULT().get(0));
+//                        cause.printStackTrace();
+                        if (!boo) {
+                            getIp();
+                        }
+                    }
+                })
+                .start(9999);
+        return 0;
+    }
+
     public int runserver() throws Exception {
 //        new HttpProxyServer().start(9999);
         LOGGER.info("runserver.........");
