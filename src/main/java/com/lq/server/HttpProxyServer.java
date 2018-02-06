@@ -30,6 +30,8 @@ import lee.study.proxyee.proxy.ProxyConfig;
 import lee.study.proxyee.proxy.ProxyType;
 import lee.study.proxyee.server.HttpProxyServerConfig;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
@@ -45,6 +47,9 @@ import java.util.*;
 public class HttpProxyServer {
     @Autowired
     RedisUtil redisUtil;
+
+    private static Logger LOGGER = LoggerFactory.getLogger(HttpProxyServer.class);
+
 
     //http代理隧道握手成功
     public final static HttpResponseStatus SUCCESS = new HttpResponseStatus(200,
@@ -137,7 +142,7 @@ public class HttpProxyServer {
 
         getIp();
 
-        Integer cacheTime = 1000 * 4;
+        Integer cacheTime = 1000 * 30;
         Timer timer = new Timer();
         // (TimerTask task, long delay, long period)任务，延迟时间，多久执行
         timer.schedule(new TimerTask() {
@@ -188,8 +193,8 @@ public class HttpProxyServer {
                             ch.pipeline().addLast("serverHandle",
                                     new HttpProxyServerHandle(serverConfig, proxyInterceptInitializer, proxyConfig,
                                             httpProxyExceptionHandle));
-                            System.out.println(proxyConfig.getHost());
-                            System.out.println(proxyConfig.getPort());
+                            LOGGER.info(proxyConfig.getHost() + "");
+                            LOGGER.info(proxyConfig.getPort() + "");
                         }
                     });
             ChannelFuture f = b
@@ -219,7 +224,6 @@ public class HttpProxyServer {
 
         //拼装请求头Proxy-Authorization的值
         String authHeader = String.format("sign=%s&orderno=%s&timestamp=%d", sign, orderno, timestamp);
-        System.out.println(authHeader);
         return authHeader;
     }
 
@@ -254,8 +258,6 @@ public class HttpProxyServer {
         // 拼装请求头Proxy-Authorization的值，这里使用 guava 进行map的拼接
         String authHeader = "MYH-AUTH-MD5 " + Joiner.on('&').withKeyValueSeparator("=").join(paramMap);
 
-        System.out.println(authHeader);
-
         return authHeader;
     }
 
@@ -265,7 +267,6 @@ public class HttpProxyServer {
 
         String code = "orderno=ZF20181258247M7dXuk,secret=b62f39d059b54c2480ec5b3d4ec0a2ba,timestamp=" + format.format(new Date());
         String sign = org.apache.commons.codec.digest.DigestUtils.md5Hex(code).toUpperCase();
-        System.out.println(sign);
 
         return sign;
 
@@ -275,7 +276,7 @@ public class HttpProxyServer {
     //    @Bean
     public int runserver() throws Exception {
 //        new HttpProxyServer().start(9999);
-        System.out.println("runserver.........");
+        LOGGER.info("runserver.........");
         new HttpProxyServer()
                 .proxyConfig(new ProxyConfig(ProxyType.HTTP, redisUtil.get("ip"), Integer.valueOf(redisUtil.get("port"))))  //使用socks5二级代理
 //                .proxyConfig(new ProxyConfig(ProxyType.HTTP, "1.194.122.8", 27961))  //使用socks5二级代理
@@ -307,13 +308,13 @@ public class HttpProxyServer {
                 .httpProxyExceptionHandle(new HttpProxyExceptionHandle() {
                     @Override
                     public void beforeCatch(Channel clientChannel, Throwable cause) throws Exception {
-                        System.out.println("111111111111111");
+                        LOGGER.info("11111111111111111");
                         cause.printStackTrace();
                     }
 
                     @Override
                     public void afterCatch(Channel clientChannel, Channel proxyChannel, Throwable cause) throws Exception {
-                        System.out.println("afterCatch捕获异常异常原因为,并检查是否过期：" + cause.toString());
+                        LOGGER.info("afterCatch捕获异常异常原因为,并检查是否过期：" + cause.toString());
                         Boolean boo = HttpUtils.chechISTimeOut(resultIPsPo.getRESULT().get(0));
 //                        cause.printStackTrace();
                         if (!boo) {
