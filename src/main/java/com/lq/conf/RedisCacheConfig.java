@@ -29,6 +29,9 @@ public class RedisCacheConfig {
         RedisSerializer<String> redisSerializer = new StringRedisSerializer();// Long类型不可以会出现异常信息;
         redisTemplate.setKeySerializer(redisSerializer);
         redisTemplate.setHashKeySerializer(redisSerializer);
+
+        redisTemplate.setValueSerializer(redisSerializer);//如果key是String 需要配置一下StringSerializer,不然key会乱码 /XX/XX
+        redisTemplate.afterPropertiesSet();
         return redisTemplate;
     }
 

@@ -1,6 +1,10 @@
 package com.lq.server;
 
 import com.google.common.base.Joiner;
+import com.lq.conf.RedisUtil;
+import com.lq.po.ResIp;
+import com.lq.po.ResultIPsPo;
+import com.lq.utils.HttpUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -8,7 +12,10 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -23,6 +30,7 @@ import lee.study.proxyee.proxy.ProxyConfig;
 import lee.study.proxyee.proxy.ProxyType;
 import lee.study.proxyee.server.HttpProxyServerConfig;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
@@ -35,6 +43,8 @@ import java.util.*;
 
 @Component
 public class HttpProxyServer {
+    @Autowired
+    RedisUtil redisUtil;
 
     //http代理隧道握手成功
     public final static HttpResponseStatus SUCCESS = new HttpResponseStatus(200,
@@ -47,12 +57,13 @@ public class HttpProxyServer {
 
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
+    private ResultIPsPo resultIPsPo;
 
     // 定义申请获得的appKey和appSecret
     static String appkey = "139739624";
     static String secret = "b62f39d059b54c2480ec5b3d4ec0a2ba";
-    final static String proxyIP = "forward.xdaili.cn";
-    final static int proxyPort = 80;
+    static String proxyIP = "forward.xdaili.cn";
+    static int proxyPort = 80;
 
     public HttpProxyServer() {
         try {
@@ -66,7 +77,6 @@ public class HttpProxyServer {
         return serverConfig.getClientSslCtx();
     }
 
-    @Bean
     private void init() throws Exception {
         //注册BouncyCastleProvider加密库
         Security.addProvider(new BouncyCastleProvider());
@@ -97,7 +107,6 @@ public class HttpProxyServer {
         if (httpProxyExceptionHandle == null) {
             httpProxyExceptionHandle = new HttpProxyExceptionHandle();
         }
-        System.out.println("init,,,success.............");
     }
 
     public HttpProxyServer serverConfig(HttpProxyServerConfig serverConfig) {
@@ -122,7 +131,42 @@ public class HttpProxyServer {
         return this;
     }
 
-    public void start(int port) {
+
+    @Bean
+    public int check() {
+
+        getIp();
+
+        Integer cacheTime = 1000 * 4;
+        Timer timer = new Timer();
+        // (TimerTask task, long delay, long period)任务，延迟时间，多久执行
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                ResIp ip = new ResIp();
+                ip.setIp(redisUtil.get("ip"));
+                ip.setPort(redisUtil.get("port"));
+                Boolean boo = HttpUtils.chechISTimeOut(ip);
+                if (!boo) {
+                    getIp();
+                }
+            }
+        }, 1, cacheTime);
+        return 0;
+    }
+
+    public void getIp() {
+
+        resultIPsPo = HttpUtils.getIp();
+
+        redisUtil.set("ip", resultIPsPo.getRESULT().get(0).getIp());
+        redisUtil.set("port", resultIPsPo.getRESULT().get(0).getPort());
+
+    }
+
+    @Bean
+    public int start(int port) {
+        port = 9999;
         bossGroup = new NioEventLoopGroup();
         workerGroup = new NioEventLoopGroup();
         try {
@@ -135,10 +179,17 @@ public class HttpProxyServer {
 
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
+
+                            proxyConfig = new ProxyConfig(ProxyType.HTTP, redisUtil.get("ip"), Integer.valueOf(redisUtil.get("port")));
+                            proxyConfig.setHost(redisUtil.get("ip"));
+                            proxyConfig.setPort(Integer.valueOf(redisUtil.get("port")));
+
                             ch.pipeline().addLast("httpCodec", new HttpServerCodec());
                             ch.pipeline().addLast("serverHandle",
                                     new HttpProxyServerHandle(serverConfig, proxyInterceptInitializer, proxyConfig,
                                             httpProxyExceptionHandle));
+                            System.out.println(proxyConfig.getHost());
+                            System.out.println(proxyConfig.getPort());
                         }
                     });
             ChannelFuture f = b
@@ -151,6 +202,7 @@ public class HttpProxyServer {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
         }
+        return 0;
     }
 
     public void close() {
@@ -217,17 +269,15 @@ public class HttpProxyServer {
 
         return sign;
 
-
     }
 
-    @Bean
-    public void runserver() throws Exception {
+
+    //    @Bean
+    public int runserver() throws Exception {
 //        new HttpProxyServer().start(9999);
-
         System.out.println("runserver.........");
-
         new HttpProxyServer()
-                .proxyConfig(new ProxyConfig(ProxyType.HTTP, proxyIP, proxyPort))  //使用socks5二级代理
+                .proxyConfig(new ProxyConfig(ProxyType.HTTP, redisUtil.get("ip"), Integer.valueOf(redisUtil.get("port"))))  //使用socks5二级代理
 //                .proxyConfig(new ProxyConfig(ProxyType.HTTP, "1.194.122.8", 27961))  //使用socks5二级代理
                 .proxyInterceptInitializer(new HttpProxyInterceptInitializer() {
                     @Override
@@ -238,12 +288,9 @@ public class HttpProxyServer {
                             public void beforeRequest(Channel clientChannel, HttpRequest httpRequest,
                                                       HttpProxyInterceptPipeline pipeline) throws Exception {
                                 //替换UA，伪装成手机浏览器
-                                httpRequest.headers().set(HttpHeaderNames.USER_AGENT,
-                                        "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1");
+//                                httpRequest.headers().set(HttpHeaderNames.USER_AGENT,
+//                                        "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1");
                                 //转到下一个拦截器处理
-                                int timestamp = (int) (new Date().getTime() / 1000);
-                                final String authHeader = authHeader("ZF20181258247M7dXuk", "b62f39d059b54c2480ec5b3d4ec0a2ba", timestamp);
-//                                httpRequest.headers().set("Proxy-Authorization", authHeader);
                                 pipeline.beforeRequest(clientChannel, httpRequest);
                             }
 
@@ -251,8 +298,6 @@ public class HttpProxyServer {
                             public void afterResponse(Channel clientChannel, Channel proxyChannel,
                                                       HttpResponse httpResponse, HttpProxyInterceptPipeline pipeline) throws Exception {
 
-                                //拦截响应，添加一个响应头
-                                httpResponse.headers().add("intercept", "test");
                                 //转到下一个拦截器处理
                                 pipeline.afterResponse(clientChannel, proxyChannel, httpResponse);
                             }
@@ -268,11 +313,16 @@ public class HttpProxyServer {
 
                     @Override
                     public void afterCatch(Channel clientChannel, Channel proxyChannel, Throwable cause) throws Exception {
-                        System.out.println("22222222222222");
-                        cause.printStackTrace();
+                        System.out.println("afterCatch捕获异常异常原因为,并检查是否过期：" + cause.toString());
+                        Boolean boo = HttpUtils.chechISTimeOut(resultIPsPo.getRESULT().get(0));
+//                        cause.printStackTrace();
+                        if (!boo) {
+                            getIp();
+                        }
                     }
                 })
                 .start(9999);
+        return 0;
     }
 
 }
