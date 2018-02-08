@@ -148,13 +148,18 @@ public class HttpProxyServer {
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
-                ResIp ip = new ResIp();
-                ip.setIp(redisUtil.get("ip"));
-                ip.setPort(redisUtil.get("port"));
-                Boolean boo = HttpUtils.chechISTimeOut(ip);
-                if (!boo) {
-                    getIp();
+                try {
+                    ResIp ip = new ResIp();
+                    ip.setIp(redisUtil.get("ip"));
+                    ip.setPort(redisUtil.get("port"));
+                    Boolean boo = HttpUtils.chechISTimeOut(ip);
+                    if (!boo) {
+                        getIp();
+                    }
+                } catch (Exception e) {
+                    LOGGER.error(e.toString());
                 }
+
             }
         }, 1, cacheTime);
         return 0;
@@ -162,10 +167,13 @@ public class HttpProxyServer {
 
     public void getIp() {
 
-        resultIPsPo = HttpUtils.getIp();
-
-        redisUtil.set("ip", resultIPsPo.getRESULT().get(0).getIp());
-        redisUtil.set("port", resultIPsPo.getRESULT().get(0).getPort());
+        try {
+            resultIPsPo = HttpUtils.getIp();
+            redisUtil.set("ip", resultIPsPo.getRESULT().get(0).getIp());
+            redisUtil.set("port", resultIPsPo.getRESULT().get(0).getPort());
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+        }
 
     }
 
@@ -287,7 +295,7 @@ public class HttpProxyServer {
 //                                httpRequest.headers().set(HttpHeaderNames.USER_AGENT,
 //                                        "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1");
                         //转到下一个拦截器处理
-                        LOGGER.info("request-url={}",httpRequest.getUri());
+                        LOGGER.info("request-url={}", httpRequest.getUri());
                         pipeline.beforeRequest(clientChannel, httpRequest);
                     }
 

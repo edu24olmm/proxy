@@ -47,7 +47,7 @@ public class HttpUtils {
             return JSONObject.parseObject(res, ResultIPsPo.class);
         } catch (Exception e) {
             LOGGER.error(e.toString());
-            return null;
+            return new ResultIPsPo();
         }
     }
 }
