@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
-@ComponentScan(value = {"com.lq"})
+@ComponentScan(value = {"com.lq.conf","com.lq.controller","com.lq.interceptor","com.lq.server"})
 public class BpaStartup {
 
     public static void main(String[] args) {

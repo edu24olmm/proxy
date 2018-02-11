@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<link th:replace="common/include::css" />
+<head>
+<title>验证权限</title>
+</head>
+<body>
+<div id="mainBox" class="mainBox" v-loading.fullscreen.lock="fullScreenLoading">
+    <el-row style="width:600px;margin:200px auto auto auto;">
+        <el-form v-model="loginForm" label-width="20%">
+            <el-col :span="24">
+                <el-form-item label="密码" prop="pwd">
+                    <el-input type="password" auto-complete="off" v-model="loginForm.pwd" placeholder="请输入密码" />
+                </el-form-item>
+            </el-col>
+        </el-form>
+    </el-row>
+    <el-row class="btns">
+        <el-button type="success" v-on:click="login">验证</el-button>
+    </el-row>
+</div>
+
+<script th:replace="common/include::script"></script>
+<script th:inline="javascript">
+/*<![CDATA[*/
+(function(){
+    var vue = new Vue({
+        el:'#mainBox',
+        data:{
+        	fullScreenLoading:false,
+            loginForm:{pwd:""}
+        },
+        methods:{//服务大类值变化回调函数
+            login:function(){
+            	this.fullScreenLoading=true;
+            	this.$http.post('login?_='+Math.random(), {'pwd':this.loginForm.pwd}).then(function(data){
+                    this.fullScreenLoading=false;
+                    if(data.body==1){
+                    	document.location.href="/task/manage";
+                    }else{
+                    	this.$alert("验证不通过!", '警告');
+                    }
+                },function(data){
+                    this.fullScreenLoading=false;
+                    this.$alert("操作失败,参考信息:"+data.status, '警告');
+                });
+            }
+        }
+    });
+})();
+/*]]>*/
+</script>
+</body>
+</html>

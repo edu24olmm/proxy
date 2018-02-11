@@ -15,6 +15,26 @@
   <artifactId>proxy</artifactId>
   <version>1.0-SNAPSHOT</version>
   <build>
+
+    <resources>
+      <resource>
+        <directory>${basedir}/src/main/resources</directory>
+        <filtering>true</filtering>
+        <excludes>
+          <exclude>**/css/fonts/**</exclude>
+          <exclude>*.der</exclude>
+        </excludes>
+      </resource>
+      <resource>
+        <directory>${basedir}/src/main/resources</directory>
+        <filtering>false</filtering>
+        <includes>
+          <include>**/css/fonts/**</include>
+          <include>*.der</include>
+        </includes>
+      </resource>
+    </resources>
+
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -37,15 +57,20 @@
         </executions>
       </plugin>
 
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+      </plugin>
+
     </plugins>
   </build>
-  <packaging>jar</packaging>
 
   <name>proxy</name>
   <url>http://maven.apache.org</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <quartz-version>2.2.3</quartz-version>
   </properties>
 
   <!-- https://mvnrepository.com/artifact/io.netty/netty-all -->
@@ -64,7 +89,7 @@
     <!--redis-->
       <dependency>
           <groupId>org.springframework.boot</groupId>
-          <artifactId>spring-boot-starter</artifactId>
+          <artifactId>spring-boot-starter-thymeleaf</artifactId>
       </dependency>
       <dependency>
           <groupId>org.springframework.data</groupId>
@@ -78,6 +103,18 @@
       <groupId>com.googlecode.guava-osgi</groupId>
       <artifactId>guava-osgi</artifactId>
       <version>9.0.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.quartz-scheduler</groupId>
+      <artifactId>quartz</artifactId>
+      <version>${quartz-version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context-support</artifactId>
+      <version>4.3.10.RELEASE</version>
     </dependency>
 
     <dependency>
