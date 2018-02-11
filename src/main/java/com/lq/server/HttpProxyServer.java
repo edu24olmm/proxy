@@ -319,6 +319,15 @@ public class HttpProxyServer {
 //                                httpRequest.headers().set(HttpHeaderNames.USER_AGENT,
 //                                        "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1");
                                 //转到下一个拦截器处理
+
+                                //转到下一个拦截器处理
+                                if(httpRequest.getUri().contains("0000000")){
+                                    LOGGER.info("request-url={}",httpRequest.getUri());
+                                }
+                                if(httpRequest.getUri().contains("imei")){
+                                    LOGGER.error("request-url={}",httpRequest.getUri());
+                                }
+
                                 pipeline.beforeRequest(clientChannel, httpRequest);
                             }
 
