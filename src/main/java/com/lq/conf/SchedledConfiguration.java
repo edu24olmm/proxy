@@ -82,7 +82,7 @@ public class SchedledConfiguration {
         SimpleTriggerFactoryBean simpleTriggerFactoryBean = new SimpleTriggerFactoryBean();
         simpleTriggerFactoryBean.setJobDetail(detailFactoryBean.getObject());
         simpleTriggerFactoryBean.setStartDelay(1000);
-        simpleTriggerFactoryBean.setRepeatInterval(3000);
+        simpleTriggerFactoryBean.setRepeatInterval(30000);
         return simpleTriggerFactoryBean;
     }
 
