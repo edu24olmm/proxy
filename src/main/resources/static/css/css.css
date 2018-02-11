@@ -1,0 +1,102 @@
+body{
+    margin: 0;
+    font-family: "Helvetica Neue",Helvetica,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","微软雅黑",Arial,sans-serif;
+}
+img{
+    vertical-align: middle;
+}
+.header{
+    position: fixed;
+    top: 0;
+    left: 0; 
+    z-index: 2;
+    width: 100%;
+    background: #324157;
+}
+.logo{
+    float: left;
+}
+.el-menu-demo{
+    float: right;
+}
+.el-menu-demo>li{
+    float: right !important;
+}
+.el-menu{
+    border-radius: 0;
+}
+.nav{
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100%;
+    padding-top: 60px;
+    width: 230px;
+    height: 100%;
+}
+
+.nav .el-menu-vertical-demo{
+    height: 100%;
+}
+.main{
+    position: absolute;
+    left: 230px;
+    top: 60px;
+    right: 0;
+    bottom: 0;
+    background: #f1f2f7;
+    overflow-y: auto;
+    padding: 14px;
+    /*box-sizing: border-box;
+    border: 2px solid red;*/
+    
+}
+
+.breadcrumb{
+    background: #fff;
+    padding: 10px;
+    border-radius:6px;
+    margin-bottom: 20px;
+}
+
+.section{
+    background: #fff;
+    margin-bottom: 20px;
+}
+
+.section-title{
+    height: 40px;
+    line-height: 40px;
+    font-size: 16px;
+    text-indent: 1em;
+    border-bottom: 1px solid #ccc;
+    color: #5e6d82;
+}
+.section-main{
+    padding: 14px;
+}
+.row-mb-14{
+    margin-bottom: 14px;
+}
+
+
+.demo-table-expand {
+    font-size: 0;
+  }
+  .demo-table-expand label {
+    width: 90px;
+    color: #99a9bf;
+  }
+  .demo-table-expand .el-form-item {
+    margin-right: 0;
+    margin-bottom: 0;
+    width: 50%;
+  }
+  
+.block-select{
+    display: block;
+    width: 100% !important;
+}
+.btns{
+    text-align: center;
+}

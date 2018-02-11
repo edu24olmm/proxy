@@ -2,7 +2,6 @@ package com.lq.server;
 
 import com.google.common.base.Joiner;
 import com.lq.conf.RedisUtil;
-import com.lq.po.ResIp;
 import com.lq.po.ResultIPsPo;
 import com.lq.utils.HttpUtils;
 import io.netty.bootstrap.ServerBootstrap;
@@ -33,7 +32,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Component;
 
 import java.security.KeyPair;
@@ -134,35 +133,6 @@ public class HttpProxyServer {
     public HttpProxyServer proxyConfig(ProxyConfig proxyConfig) {
         this.proxyConfig = proxyConfig;
         return this;
-    }
-
-
-    @Bean
-    public int check() {
-
-        getIp();
-
-        Integer cacheTime = 1000 * 30;
-        Timer timer = new Timer();
-        // (TimerTask task, long delay, long period)任务，延迟时间，多久执行
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    ResIp ip = new ResIp();
-                    ip.setIp(redisUtil.get("ip"));
-                    ip.setPort(redisUtil.get("port"));
-                    Boolean boo = HttpUtils.chechISTimeOut(ip);
-                    if (!boo) {
-                        getIp();
-                    }
-                } catch (Exception e) {
-                    LOGGER.error(e.toString());
-                }
-
-            }
-        }, 1, cacheTime);
-        return 0;
     }
 
     public void getIp() {
@@ -280,8 +250,9 @@ public class HttpProxyServer {
 
     }
 
-    @Bean
     public int runserver2() throws Exception {
+
+
         LOGGER.info("runserver2.........");
         proxyInterceptInitializer(new HttpProxyInterceptInitializer() {
             @Override

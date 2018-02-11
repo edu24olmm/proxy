@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html>
+<link th:replace="common/include::css" />
+<head>
+<title>计划任务管理</title>
+</head>
+<body>
+<div id="mainBox" class="mainBox" v-loading.fullscreen.lock="fullScreenLoading">
+    <div class="searchBox">
+        <el-row  style="margin-top:10px;">
+            <el-button type="warning" v-on:click="run">运行</el-button>
+            <el-button type="success" v-on:click="pause">暂停</el-button>
+            <el-button type="success" v-on:click="resume">恢复</el-button>
+            <el-button type="success" v-on:click="reset">重设</el-button>
+        </el-row>
+        <el-row>
+            <div class="title" style="margin-top:20px">查询结果</div>
+        </el-row>
+        <!-- <![CDATA[ -->
+        <el-row th:inline="text">
+            <el-table ref="resultTable" v-loading="tableLoading" element-loading-text="拼命加载中..."  :data="tableData" :border="tableBorder" :highlight-current-row="tableHighlightCurrentRow" style="width:100%" v-on:current-change="currentRowChange" v-on:selection-change="multiRowSelect" v-on:sort-change="pageSortChange">
+                <el-table-column type="index" align="center" />
+                <el-table-column align="center" prop="triggerName" label="触发名称" />
+                <el-table-column align="center" prop="triggerType" label="类型" :formatter="triggerTypeFormatter" />
+                <el-table-column align="center" prop="cronExpression" label="参数值" :formatter="cronExpressionFormatter" />
+                <el-table-column align="center" prop="status" label="状态" :formatter="statusFormatter"/>
+                <el-table-column align="center" prop="nextFireTime" label="预测下次启动时间" :formatter="nextFireTimeFormatter"/>
+                <el-table-column align="center" prop="triggeredTimes" label="自动触发次数" :formatter="triggeredTimesFormatter"/>
+                <el-table-column align="center" prop="previousFireTime" label="上次运行时间" :formatter="previousFireTimeFormatter"/>
+            </el-table>
+            <el-pagination v-on:size-change="pageSizeChange" v-on:current-change="currentPageChange" :current-page="page.currentPage" :page-sizes="page.pageSizes" :page-size="page.pageSize" layout="total, -> , sizes, prev, pager, next" :total="page.pageTotal"></el-pagination>
+        </el-row>
+        <!-- ]]> -->
+    </div>
+    <div id="exportBox" style="display:none">
+        <form action="export" method="post">
+            <input type="hidden" name="cityId" value="" />
+            <input type="hidden" name="companyId" value="" />
+            <input type="hidden" name="jsonStr" value="" />
+        </form>
+    </div>
+    <el-dialog title="修改参数" size="small" v-model="dialog1Visible">
+        <el-form ref="form1" :model="form1" label-width="20%">
+            <el-row>
+                <el-col :span="16">
+	                <el-form-item label="触发名称">
+	                    {{form1.triggerName}}
+	                </el-form-item>
+	            </el-col>
+	            <el-col :span="16">
+	                <el-form-item label="类型">
+	                    {{form1.triggerTypeName}}
+	                </el-form-item>
+	            </el-col>
+                <el-col :span="16">
+                    <el-form-item label="状态">
+                        {{form1.statusName}}
+                    </el-form-item>
+                </el-col>
+            </el-row>
+            <el-row>
+                <el-col :span="16">
+                    <el-form-item label="cron表达式" prop="cronExpression">
+                        <el-input :disabled="form1.cronExpressionDisabled" auto-complete="off" v-model="form1.cronExpression" placeholder="请输入 cron表达式" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="16">
+                    <el-form-item label="固定间隔" prop="repeatInterval">
+                        <el-input :disabled="form1.repeatIntervalDisabled" auto-complete="off" v-model="form1.repeatInterval" placeholder="请输入 固定间隔" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="16">
+                    <el-form-item label="时间单位" prop="repeatIntervalUnit">
+                        <el-select :disabled="form1.repeatIntervalUnitDisabled" v-model="form1.repeatIntervalUnit">
+                            <el-option label="请选择" value="" />
+                            <el-option th:each="obj,objStat : ${intervalUnitList}" th:label="${obj}" th:value="${obj}" />
+                        </el-select>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="16">
+                    <el-form-item label="重复次数" prop="repeatCount">
+                        <el-input :disabled="form1.repeatCountDisabled" auto-complete="off" v-model="form1.repeatCount" placeholder="请输入 重复次数" />
+                    </el-form-item>
+                </el-col>
+            </el-row>
+            <el-row>
+                <el-col :span="16">
+                    <el-form-item label="开始时间" prop="startTime">
+                        <el-date-picker :editable="datePickerEditable" type="datetime" :disabled="form1.startTimeDisabled" auto-complete="off" v-model="form1.startTime" placeholder="请输入 开始时间" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="16">
+                    <el-form-item label="结束时间" prop="endTime">
+                        <el-date-picker :editable="datePickerEditable" type="datetime" :disabled="form1.endTimeDisabled" auto-complete="off" v-model="form1.endTime" placeholder="请输入 结束时间" />
+                    </el-form-item>
+                </el-col>
+            </el-row>
+            <el-row class="btns">
+                <el-button type="primary" v-on:click="submitForm1">保存</el-button>
+                <el-button type="info" v-on:click="closeForm('dialog1Visible')">关闭</el-button>
+            </el-row>
+        </el-form>
+    </el-dialog>
+</div>
+<script th:replace="common/include::script"></script>
+<script th:inline="javascript">
+/*<![CDATA[*/
+(function(){
+    var vue = new Vue(Vue.extendData({
+        el:'#mainBox',
+        data:{
+            tableLoading:false,
+            tableBorder:true,
+            tableHighlightCurrentRow:true,
+            tableData:[],
+            selectRow:null,
+            selectRowList:[],
+            form1:{
+            	triggerName:'',cronExpression:'',repeatInterval:'',repeatIntervalUnit:'',repeatCount:'',startTime:'',endTime:'',statusName:'',
+            	cronExpressionDisabled:true,
+            	repeatIntervalDisabled:true,
+            	repeatIntervalUnitDisabled:true,
+            	repeatCountDisabled:true,
+            	startTimeDisabled:true,
+            	endTimeDisabled:true
+            },
+            dialog1Visible:false
+        },
+        methods:{
+        	triggerTypeFormatter:function(row,col){
+        		var text='';
+        		if(row.triggerType!=null){
+                    switch(row.triggerType){
+                    case 1:
+                        text = '固定间隔时间';
+                        break;
+                    case 2:
+                        text = 'cron';
+                        break;
+                    case 3:
+                        text = '每日重复';
+                        break;
+                    case 4:
+                        text = '日历重复';
+                        break;
+                    default:
+                        text = row.triggerType;
+                        break;
+                    }
+        		}
+        		return text;
+        	},
+        	cronExpressionFormatter:function(row,col){
+        		var text='-';
+        		if(row.cronExpression){
+        			text = row.cronExpression;
+        		}else if(row.repeatInterval){
+        			text = row.repeatInterval+' '+row.repeatIntervalUnit+' '+row.repeatCount;
+        		}
+        		return text;
+        	},
+        	statusFormatter:function(row,col){
+        		var text='';
+                if(row.status!=null){
+                    switch(row.status){
+                    case 'NONE':
+                        text = '无';
+                        break;
+                    case 'NORMAL':
+                        text = '就绪';
+                        break;
+                    case 'BLOCKED':
+                        text = '正在运行';
+                        break;
+                    case 'COMPLETE':
+                        text = '完毕';
+                        break;
+                    case 'ERROR':
+                        text = '错误';
+                        break;
+                    case 'PAUSED':
+                        text = '暂停';
+                        break;
+                    default:
+                        text = row.status;
+                        break;
+                    }
+                }
+                return text;
+        	},
+        	triggeredTimesFormatter:function(row,col){
+        		return row.triggeredTimes==null?'-':row.triggeredTimes;
+        	},
+            filleZero:function(i){
+                return i<10?("0"+i):(""+i);
+            },
+            formateDate:function(millisec){
+                var ct = new Date();
+                ct.setTime(millisec);
+                return ct.getFullYear()+"-"+this.filleZero(ct.getMonth()+1)+"-"+this.filleZero(ct.getDate())+" "+this.filleZero(ct.getHours())+":"+this.filleZero(ct.getMinutes())+":"+this.filleZero(ct.getSeconds());
+            },
+            previousFireTimeFormatter:function(row,col){
+                var text = '-';
+                if(row.previousFireTime!=null){
+                    text = this.formateDate(row.previousFireTime);
+                }
+                return text;
+            },
+            nextFireTimeFormatter:function(row,col){
+            	var text = '-';
+                if(row.nextFireTime!=null){
+                    text = this.formateDate(row.nextFireTime);
+                }
+                return text;
+        	},//搜索数据
+            queryFormSearch:function(){
+                this.tableLoading=true;
+                this.selectRow=null;
+                this.selectRowList=[];
+                this.$http.post('list?_='+Math.random(), {}).then(function(data){
+                    this.tableLoading=false;
+                    this.tableData = data.body;
+                },function(data){
+                    this.tableLoading=false;
+                    this.$alert("查询失败,参考信息:"+data, '警告');
+                });
+            },
+            run:function(){
+                if(this.selectRow==null){
+                	this.$alert('请选择一条数据','提示');
+                }else{
+                	var _vue = this;
+                	_vue.fullScreenLoading=true;
+                    _vue.$http.post('run?_='+Math.random(), {
+                    	"groupName":this.selectRow.groupName, "jobName":this.selectRow.jobName
+                    }).then(
+                        function(vdata){
+                            var result = vdata.body;
+                            _vue.fullScreenLoading=false;
+                            if(result.code==1){
+                                _vue.$alert("操作成功", '提示', {
+                                    callback:function(){
+                                        _vue.queryFormSearch();
+                                    }
+                                });
+                            }else{
+                                _vue.$alert("操作失败,参考错误代码:"+result.code, '提示');
+                            }
+                        },
+                        function(data){
+                            _vue.fullScreenLoading=false;
+                            _vue.$alert("操作失败,状态代码:"+data.status, '警告');
+                        }
+                    );
+                }
+            },
+            pause:function(){
+            	if(this.selectRow==null){
+                    this.$alert('请选择一条数据','提示');
+                }else{
+                    var _vue = this;
+                    _vue.fullScreenLoading=true;
+                    _vue.$http.post('pause?_='+Math.random(), {
+                    	"groupName":this.selectRow.groupName, "triggerName":this.selectRow.triggerName
+                    }).then(
+                        function(vdata){
+                            var result = vdata.body;
+                            _vue.fullScreenLoading=false;
+                            if(result.code==1){
+                                _vue.$alert("操作成功", '提示', {
+                                    callback:function(){
+                                        _vue.queryFormSearch();
+                                    }
+                                });
+                            }else{
+                                _vue.$alert("操作失败,参考错误代码:"+result.code, '提示');
+                            }
+                        },
+                        function(data){
+                            _vue.fullScreenLoading=false;
+                            _vue.$alert("操作失败,状态代码:"+data.status, '警告');
+                        }
+                    );
+                }
+            },
+            resume:function(){
+            	if(this.selectRow==null){
+                    this.$alert('请选择一条数据','提示');
+                }else{
+                    var _vue = this;
+                    _vue.fullScreenLoading=true;
+                    _vue.$http.post('resume?_='+Math.random(), {
+                    	"groupName":this.selectRow.groupName, "triggerName":this.selectRow.triggerName
+                    }).then(
+                        function(vdata){
+                            var result = vdata.body;
+                            _vue.fullScreenLoading=false;
+                            if(result.code==1){
+                                _vue.$alert("操作成功", '提示', {
+                                    callback:function(){
+                                        _vue.queryFormSearch();
+                                    }
+                                });
+                            }else{
+                                _vue.$alert("操作失败,参考错误代码:"+result.code, '提示');
+                            }
+                        },
+                        function(data){
+                            _vue.fullScreenLoading=false;
+                            _vue.$alert("操作失败,状态代码:"+data.status, '警告');
+                        }
+                    );
+                }
+            },
+            reset:function(){
+            	if(this.selectRow==null){
+                    this.$alert('请选择一条数据','提示');
+                }else{
+                    this.form1.triggerName=this.selectRow.triggerName;
+                    this.form1.groupName=this.selectRow.groupName;
+                    this.form1.triggerType = this.selectRow.triggerType;
+                    this.form1.cronExpression=this.selectRow.cronExpression;
+                    this.form1.repeatInterval=this.selectRow.repeatInterval;
+                    this.form1.repeatIntervalUnit=this.selectRow.repeatIntervalUnit;
+                    this.form1.repeatCount=this.selectRow.repeatCount;
+                    this.form1.startTime=this.selectRow.startTime;
+                    this.form1.endTime=this.selectRow.endTime;
+                    this.form1.statusName=this.statusFormatter(this.selectRow);
+                    this.form1.triggerTypeName=this.triggerTypeFormatter(this.selectRow);
+                    
+                    this.form1.cronExpressionDisabled=true;
+                    this.form1.repeatIntervalDisabled=true;
+                    this.form1.repeatIntervalUnitDisabled=true;
+                    this.form1.repeatCountDisabled=true;
+                    this.form1.startTimeDisabled=true;
+                    this.form1.endTimeDisabled=true;
+                    
+                    switch(this.selectRow.triggerType){
+                    case 1://固定间隔
+                        this.form1.repeatIntervalDisabled=false;
+                        this.form1.repeatIntervalUnitDisabled=false;
+                        break;
+                    case 2://cron
+                        this.form1.cronExpressionDisabled=false;
+                        break;
+                    case 3://每日重复
+                        this.form1.repeatIntervalDisabled=false;
+                        this.form1.repeatIntervalUnitDisabled=false;
+                        this.form1.repeatCountDisabled=false;
+                        break;
+                    case 4://日历重复
+                        this.form1.startTimeDisabled=false;
+                        this.form1.endTimeDisabled=false;
+                        break;
+                    }
+                    this.dialog1Visible=true;
+                }
+            },//关闭dialog
+            closeForm:function(v){
+                this[v]=false;
+            },
+            submitForm1:function(){
+            	var data1={groupName:this.form1.groupName,triggerName:this.form1.triggerName};
+            	switch(this.form1.triggerType){
+            	 case 1://固定间隔
+            		 data1.repeatInterval=$.trim(this.form1.repeatInterval);
+            		 data1.repeatIntervalUnit=$.trim(this.form1.repeatIntervalUnit);
+            		 if(data1.repeatInterval==""){
+            			 if(!data1.repeatInterval){
+            				 this.$alert('请输入 固定间隔');
+                             return;
+            			 }else if(/^[1-9]{1}[0-9]{0,}$/.test(data1.repeatInterval)==false){
+            				 this.$alert('固定间隔 必须是一个整数数字');
+                             return;
+            			 }
+            			 if(!data1.repeatIntervalUnit){
+                             this.$alert('请选择 时间单位');
+                             return;
+                         }
+            		 }
+                     break;
+                 case 2://cron
+                	 data1.cronExpression=$.trim(this.form1.cronExpression);
+                	 if(!data1.cronExpression){
+                		 this.$alert('请输入 cron表达式');
+                		 return;
+                	 }
+                     break;
+                 case 3://每日重复
+                	 data1.repeatInterval=$.trim(this.form1.repeatInterval);
+                	 data1.repeatIntervalUnit=$.trim(this.form1.repeatIntervalUnit);
+                	 data1.repeatCount=$.trim(this.form1.repeatCount);
+                	 if(!data1.repeatInterval){
+                         this.$alert('请输入 固定间隔');
+                         return;
+                     }else if(/^[1-9]{1}[0-9]{0,}$/.test(data1.repeatInterval)==false){
+                         this.$alert('固定间隔 必须是一个整数数字');
+                         return;
+                     }
+                     if(!data1.repeatIntervalUnit){
+                         this.$alert('请选择 时间单位');
+                         return;
+                     }
+                     if(!data1.repeatCount){
+                         this.$alert('请输入 重复次数');
+                         return;
+                     }else if(/^[1-9]{1}[0-9]{0,}$/.test(data1.repeatCount)==false){
+                         this.$alert('重复次数 必须是一个整数数字');
+                         return;
+                     }
+                     break;
+                 case 4://日历重复
+                	 data1.startTime=$.trim(this.form1.startTime);
+                	 data1.endTime=$.trim(this.form1.endTime);
+                	 if(!data1.startTime){
+                         this.$alert('请选择 开始时间');
+                         return;
+                     }
+                	 if(!data1.endTime){
+                         this.$alert('请选择 结束时间');
+                         return;
+                     }
+                     break;
+                 }
+            	this.fullScreenLoading=true;
+            	this.$http.post('reset?_='+Math.random(), data1).then(function(resp){
+                    this.fullScreenLoading=false;
+                    if(resp.body.code==1){
+                    	var _vue=this;
+                    	this.dialog1Visible=false;
+                    	this.$alert('操作成功','提示',{'callback':function(){
+                    		_vue.queryFormSearch();
+                    	}});
+                    }else{
+                    	this.$alert("操作失败,参考信息:{code:"+resp.body.code+",msg:"+resp.body.msg+"}", '警告');
+                    }
+                },function(data){
+                    this.fullScreenLoading=false;
+                    this.$alert("更新失败,参考信息:"+data.status, '警告');
+                });
+            }
+        }
+    }));
+    //因为在排序回调函数中已经调用查询数据函数,所以此处不再调用
+    vue.queryFormSearch();
+})();
+/*]]>*/
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+@CHARSET "UTF-8";
+
+.searchBox{
+	padding:13px;
+}
+.mainBox .title{
+	line-height:40px;font-size:16px;font-size: 16px;text-indent: 1em; border-bottom: 1px solid #ccc;color: #5e6d82; margin:0px 0px 10px 0px;
+}
