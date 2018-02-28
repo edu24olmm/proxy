@@ -2,11 +2,15 @@ package com.lq.utils;
 
 import com.alibaba.fastjson.JSONObject;
 import com.lq.po.ResIp;
+import com.lq.po.ResultIPsPagePo;
 import com.lq.po.ResultIPsPo;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class HttpUtils {
 
@@ -38,7 +42,33 @@ public class HttpUtils {
     }
 
     public static ResultIPsPo getIp() {
-        LOGGER.info("initIP...........");
+        LOGGER.info("getFeeIp......begin.....");
+        String feeIpUrl = "http://www.xdaili.cn/ipagent//freeip/getFreeIps?page=1&rows=10";
+        Connection feeConn = Jsoup.connect(feeIpUrl);
+        ResultIPsPo resultIPsPo = new ResultIPsPo();
+        try {
+            String feeRes = feeConn.get().text();
+            LOGGER.info(feeRes);
+            ResultIPsPagePo feePagePo = JSONObject.parseObject(feeRes, ResultIPsPagePo.class);
+            ResultIPsPo feePo = JSONObject.parseObject(feePagePo.getRESULT(), ResultIPsPo.class);
+            if (feePagePo != null && feePagePo.getERRORCODE().equalsIgnoreCase("0") && feePo != null) {
+                List<ResIp> feeResList = feePo.getRows();
+                for (int i = 0; i < feeResList.size(); i++) {
+                    if (chechISTimeOut(feeResList.get(i))) {
+                        ResIp resIp = feeResList.get(i);
+                        List<ResIp> resIpList = new ArrayList<>();
+                        resIpList.add(resIp);
+                        resultIPsPo.setRESULT(resIpList);
+                        return resultIPsPo;
+                    }
+                }
+
+            }
+        } catch (Exception e) {
+            LOGGER.error(e.getMessage());
+        }
+
+        LOGGER.info("getFeeIp...end,res..is null,get payMoney ip...........");
         String url = "http://api.xdaili.cn/xdaili-api//greatRecharge/getGreatIp?spiderId=80f33066216b483b9e935d982e428289&orderno=YZ2018238955QxghNP&returnType=2&count=1";
         Connection conn = Jsoup.connect(url);
         try {

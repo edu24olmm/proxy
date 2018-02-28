@@ -164,8 +164,6 @@ public class HttpProxyServer {
                         protected void initChannel(Channel ch) throws Exception {
 
                             proxyConfig = new ProxyConfig(ProxyType.HTTP, redisUtil.get("ip"), Integer.valueOf(redisUtil.get("port")));
-                            proxyConfig.setHost(redisUtil.get("ip"));
-                            proxyConfig.setPort(Integer.valueOf(redisUtil.get("port")));
 
                             ch.pipeline().addLast("httpCodec", new HttpServerCodec());
                             ch.pipeline().addLast("serverHandle",

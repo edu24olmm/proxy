@@ -31,6 +31,15 @@ public class ResultIPsPo {
 
     private String ERRORCODE;
     private List<ResIp> RESULT;
+    private List<ResIp> rows;
+
+    public List<ResIp> getRows() {
+        return rows;
+    }
+
+    public void setRows(List<ResIp> rows) {
+        this.rows = rows;
+    }
 
     public String getERRORCODE() {
         return ERRORCODE;
