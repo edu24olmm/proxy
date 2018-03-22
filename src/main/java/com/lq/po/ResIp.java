@@ -6,6 +6,15 @@ public class ResIp {
     private String ip;
     private String time;
     private String anony;
+    private Long createTime;
+
+    public Long getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(Long createTime) {
+        this.createTime = createTime;
+    }
 
     public String getTime() {
         return time;

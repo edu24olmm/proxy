@@ -10,11 +10,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class HttpUtils {
 
     private static Logger LOGGER = LoggerFactory.getLogger(HttpUtils.class);
+
+    public static void main(String[] args) {
+        System.out.println(new Date().getTime() - 1521709718000L > 5 * 60 * 1000);
+    }
 
     /**
      * 检查ip是否过期
@@ -23,6 +28,12 @@ public class HttpUtils {
      * @return
      */
     public static Boolean chechISTimeOut(ResIp ip) {
+
+        if (new Date().getTime() - ip.getCreateTime() > 5 * 60 * 1000) {
+            LOGGER.debug("这个ip超过了 5 分钟了");
+            return false;
+        }
+
         String url = "http://www.xdaili.cn/ipagent//checkIp/ipList?ip_ports%5B%5D=" + ip.getIp() + "%3A" + ip.getPort();
         Connection conn = Jsoup.connect(url);
         try {
