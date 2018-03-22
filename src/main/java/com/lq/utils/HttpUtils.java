@@ -29,8 +29,8 @@ public class HttpUtils {
      */
     public static Boolean chechISTimeOut(ResIp ip) {
 
-        if (new Date().getTime() - ip.getCreateTime() > 5 * 60 * 1000) {
-            LOGGER.debug("这个ip超过了 5 分钟了");
+        if (ip.getCreateTime()!=null&&new Date().getTime() - ip.getCreateTime() > 4 * 60 * 1000) {
+            LOGGER.debug("这个ip超过了 4 分钟了");
             return false;
         }
 
